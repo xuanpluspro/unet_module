@@ -1,0 +1,25 @@
+name: OSSSeg CPU checks
+on:
+  push:
+    branches: ["codex/ossseg-rgb-voc512"]
+  pull_request:
+    paths: ["model/**", "utils/**", "*.py", "tests/**", "requirements.txt", ".github/workflows/ossseg-tests.yml"]
+permissions:
+  contents: read
+jobs:
+  cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install "numpy>=1.24,<3" "Pillow>=10" "matplotlib>=3.7"
+      - run: python -m compileall -q model utils train_medical.py val.py predict.py check_data.py tests
+      - run: python -m unittest discover -s tests -v
