@@ -95,14 +95,14 @@ def val(args):
 
     input_shape = [512, 512]  # 一定要是32的整数倍
 
-    # 创建训练数据集对象
+    # 创建独立验证数据集对象
     # args.data_path: 数据集的根路径， input_shape: 输入图像的尺，num_classes: 输出类别数，表示分割任务中的类别数
-    # augmentation=True: 是否采用数据增强，txt_name="train.txt": 指定用于加载训练数据的文本文件名
-    val_dataset = UnetDataset(args.data_path, input_shape, num_classes, augmentation=False, txt_name="trainval.txt")
+    # 验证固定读取 val.txt，关闭随机数据增强
+    val_dataset = UnetDataset(args.data_path, input_shape, num_classes, augmentation=False, txt_name="val.txt")
 
     # 加载验证集的DataLoader
     val_loader = DataLoader(val_dataset,
-                        shuffle=True,
+                        shuffle=False,
                         batch_size=1,
                         num_workers=0,
                         pin_memory=True,

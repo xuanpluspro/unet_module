@@ -115,9 +115,9 @@ def train(args):
 
     # 创建训练数据集对象
     # args.data_path: 数据集的根路径， input_shape: 输入图像的尺，num_classes: 输出类别数，表示分割任务中的类别数
-    # augmentation=True: 是否采用数据增强，txt_name="train.txt": 指定用于加载训练数据的文本文件名
+    # 训练读取 train.txt 并启用增强；验证读取 val.txt 并关闭随机增强
     train_dataset = UnetDataset(args.data_path, input_shape, num_classes, augmentation=True, txt_name="train.txt")
-    val_dataset = UnetDataset(args.data_path, input_shape, num_classes, augmentation=False, txt_name="trainval.txt")
+    val_dataset = UnetDataset(args.data_path, input_shape, num_classes, augmentation=False, txt_name="val.txt")
 
     # 加载训练集的DataLoader
     train_loader = DataLoader(train_dataset,
