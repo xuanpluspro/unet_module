@@ -67,35 +67,17 @@ def create_model(num_classes, weights):
     return model
 
 
-def get_optimizer_and_lr(model, batch_size, train_epoch, momentum, weight_decay):
-    # 初始化学习率（初始学习率为1e-4）
-    Init_lr = 1e-4
-    # 最小学习率是初始学习率的1%
-    Min_lr = Init_lr * 0.01
-
-    # 设置学习率衰减策略，'cos'代表余弦衰减
-    lr_decay_type = 'cos'
-
-    # 默认每个小批量（batch）的大小为16
-    nbs = 16
-    # 设置最大学习率限制
-    lr_limit_max = 1e-4
-    # 设置最小学习率限制
-    lr_limit_min = 1e-4
-
-    # 根据当前batch_size调整学习率，并确保它在最大和最小限制之间
-    Init_lr_fit = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
-    # 根据当前batch_size调整最小学习率，并确保它在最大和最小限制之间
-    Min_lr_fit = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
-
-    # 使用Adam优化器，设置学习率、动量、权重衰减等参数
-    optimizer = optim.Adam(model.parameters(), Init_lr_fit, betas=(momentum, 0.999),
+def get_optimizer_and_lr(model, batch_size, train_epoch, momentum, weight_decay, lr=1e-4):
+    """Use the requested peak LR, independent of batch size; retain warmup/cosine."""
+    import math
+    if not math.isfinite(lr) or lr <= 0:
+        raise ValueError("--lr must be finite and greater than zero")
+    if batch_size < 1 or train_epoch < 1:
+        raise ValueError("batch_size and epochs must be positive")
+    optimizer = optim.Adam(model.parameters(), lr, betas=(momentum, 0.999),
                            weight_decay=weight_decay)
-    # 获取学习率调度器函数，根据衰减类型、初始学习率、最小学习率和训练轮次来计算学习率的变化
-    lr_scheduler_func = get_lr_scheduler(lr_decay_type, Init_lr_fit, Min_lr_fit, train_epoch)
-    # 返回优化器和学习率调度器
+    lr_scheduler_func = get_lr_scheduler("cos", lr, lr * 0.01, train_epoch)
     return optimizer, lr_scheduler_func
-
 
 def train(args):
     seed_everything(11)  # 设置种子
@@ -149,7 +131,7 @@ def train(args):
     # scaler = torch.amp.GradScaler(device='cuda') if args.amp else None  # 在pytorch2.7.1版本可以运用该代码可以去除警告信息
 
     # 获取优化器和学习率调度器
-    optimizer, lr_scheduler_func = get_optimizer_and_lr(model, batch_size, train_epoch, args.momentum, args.weight_decay)
+    optimizer, lr_scheduler_func = get_optimizer_and_lr(model, batch_size, train_epoch, args.momentum, args.weight_decay, lr=args.lr)
 
     # 训练开始
     start_time = time.time()
@@ -219,7 +201,7 @@ def parse_args():
     parser.add_argument("--epochs", default=100, type=int, metavar="N", help="number of total epochs to train")
     parser.add_argument("--workers", default=0, type=int, metavar="N",
                         help="number of data loading workers (default: 0, meaning data loading runs in main process)")
-    parser.add_argument('--lr', default=0.0001, type=float, help='initial learning rate')
+    parser.add_argument('--lr', default=0.0001, type=float, help='peak learning rate before cosine decay; independent of batch size')
     parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
     parser.add_argument('--weight-decay', default=1e-4, type=float,
                         metavar='W', help='weight decay (default: 1e-4)',
